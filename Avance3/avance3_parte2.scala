@@ -46,6 +46,7 @@ data.select("etnia").distinct().show
 
 // COMMAND ----------
 
+// grafico con la cantidad de encuestados en las diferentes etnias
 display(data.select("etnia").groupBy("etnia").count.orderBy("etnia"))
 
 // COMMAND ----------
@@ -108,7 +109,16 @@ display(data.groupBy("etnia").pivot("genero").agg(round(avg("edad")).cast(Intege
 
 // COMMAND ----------
 
-data.select("estado_civil").distinct().show
+data.select("condicion_actividad").distinct().show
+
+// COMMAND ----------
+
+// MAGIC %md
+// MAGIC • Ingreso laboral promedio segun el genero y la condicion actividad en las diferentes etnias
+
+// COMMAND ----------
+
+display(data.groupBy("etnia", "condicion_actividad").pivot("genero").avg("ingreso_laboral").orderBy("etnia", "condicion_actividad"))
 
 // COMMAND ----------
 
@@ -118,24 +128,24 @@ val dataMestizos = data.where($"etnia" === "6 - Mestizo")
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC • Cantidad en los diferentes estados civiles de la etnia mestizo
-
-// COMMAND ----------
-
-display(dataMestizos.groupBy("etnia").pivot("estado_civil").count.orderBy("etnia"))
-
-// COMMAND ----------
-
-data.select("condicion_actividad").distinct().show
-
-// COMMAND ----------
-
-// MAGIC %md
-// MAGIC • Cantidad en las diferentes condiciones de actividad de la etnia mestizo
+// MAGIC • Cantidad en las diferentes condiciones de actividad de la etnia con mayor numero de encuestados
 
 // COMMAND ----------
 
 display(dataMestizos.groupBy("etnia").pivot("condicion_actividad").count.orderBy("etnia"))
+
+// COMMAND ----------
+
+data.select("estado_civil").distinct().show
+
+// COMMAND ----------
+
+// MAGIC %md
+// MAGIC • Cantidad de personas segun su estado civil con las diferentes condiciones de actividad en la etnia con mayor numero de encuestados
+
+// COMMAND ----------
+
+display(dataMestizos.groupBy("etnia", "condicion_actividad").pivot("estado_civil").count.orderBy("condicion_actividad"))
 
 // COMMAND ----------
 
