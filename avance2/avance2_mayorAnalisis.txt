@@ -1,0 +1,146 @@
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
+
+
+import org.apache.spark.sql.types._
+val myDataSchema = StructType(
+    Array(
+        StructField("id_persona", DecimalType(26, 0), true), 
+        StructField("anio", IntegerType, true), 
+        StructField("mes", IntegerType, true), 
+        StructField("provincia", IntegerType, true), 
+        StructField("canton", IntegerType, true), 
+        StructField("area", StringType, true), 
+        StructField("genero", StringType, true), 
+        StructField("edad", IntegerType, true), 
+        StructField("estado_civil", StringType, true), 
+        StructField("nivel_de_instruccion", StringType, true), 
+        StructField("etnia", StringType, true), 
+        StructField("ingreso_laboral", IntegerType, true), 
+        StructField("condicion_actividad", StringType, true), 
+        StructField("sectorizacion", StringType, true), 
+        StructField("grupo_ocupacion", StringType, true), 
+        StructField("rama_actividad", StringType, true), 
+        StructField("factor_expansion", DoubleType, true)
+    ));
+
+
+
+val data = spark
+  .read
+  .schema(myDataSchema)
+//  .option("inferSchema", true)
+  .option("header", "true")
+  .option("delimiter", "\t")
+  .csv("/FileStore/tables/Datos_ENEMDU_PEA_v2.csv");
+
+
+
+data.schema
+
+
+
+data.select("estado_civil").distinct().show
+
+
+
+data.describe("edad").show()
+
+
+
+data.select("edad").distinct().show
+
+
+
+// 1) Cual es la cantidad de personas mayores y menores de edad
+val menorEdad = data.where($"edad" < 18)
+println("Menores de edad: " + menorEdad.count)
+
+
+val mayorEdad = data.where($"edad" >= 18)
+println("Mayores de edad: " + mayorEdad.count)
+
+
+
+// 2) Porcentaje que representan los menores y mayores de edad
+println("Menores de Edad: " + menorEdad.count / data.count.toDouble * 100 + "%")
+println("Mayores de Edad: " + mayorEdad.count / data.count.toDouble * 100 + "%")
+
+
+
+// 3) Porcentajes de mayores de edad que tienen un empleo adecuado y son casados
+print("Porcentaje de personas que son mayores de edad y son casadas: " + (mayorEdad.where($"condicion_actividad" === "5 - Empleo no remunerado" && $"estado_civil" === "1 - Casado(a)")).count / mayorEdad.count.toDouble * 100 + "% ")
+
+
+
+// 4) Cuantas personas mayores de edad tienen un empleo no remunerado.
+mayorEdad.where($"condicion_actividad" === "5 - Empleo no remunerado").count
+
+
+
+// 5) Cual es el porcentaje de personas menor de edad que tienen un desempleo oculto.
+val menorE_desOcult = (menorEdad.where($"condicion_actividad" === "8 - Desempleo oculto").count / menorEdad.count.toDouble) * 100 + "%"
+
+
+
+// 6) Que porcentaje de persona de la tercera edad cuentan con un Subempleo por insuficiencia de ingresos
+val terceraEdad = data.where($"edad" > 65)
+
+
+println("Tercera edad que cuentan con un Subempleo por insuficiencia de ingresos: " + (terceraEdad.where($"condicion_actividad" === "3 - Subempleo por insuficiencia de ingresos").count / terceraEdad.count.toDouble) * 100 + "%")
+
+
+
+// 7) Cuantas personas mayores de edad hombres, de tienen un Subempleo por insuficiencia de tiempo de trabajo
+mayorEdad.where($"condicion_actividad" === "2 - Subempleo por insuficiencia de tiempo de trabajo" && $"genero" === "1 - Hombre").count
+
+
+
+//8) Cual es la cantidad de personas menores de edad constan con un empleo no clasificado y que porcentaje representan entre los menores de edad
+menorEdad.where($"condicion_actividad" === "6 - Empleo no clasificado").count
+
+
+println("Menores de Edad con empleo no clasificado: " + (menorEdad.where($"condicion_actividad" === "6 - Empleo no clasificado").count / menorEdad.count.toDouble) * 100)
+
+
+
+// 9) Cual es el procentaje de personas menores de edad que tienen un desempleo abierto y un Desempleo oculto
+println("Menores de edad con desempleo abierto: " + (mayorEdad.where($"condicion_actividad" === "7 - Desempleo abierto").count / mayorEdad.count.toDouble) * 100 + "%")
+println("Menores de edad con desempleo oculto: " + (mayorEdad.where($"condicion_actividad" === "8 - Desempleo oculto").count / mayorEdad.count.toDouble) * 100 + "%")
+
+
+
+// 10) Cuantos hombres y mujeres mayores de edad cuentan con un empleo adecuado
+val mujeresEmpleoAdecuado = mayorEdad.where($"genero" === "2 - Mujer" && $"condicion_actividad" === "1 - Empleo Adecuado/Pleno")
+println("Mujeres: " + mujeresEmpleoAdecuado.count)
+
+
+val hombresEmpleoAdecuado = mayorEdad.where($"genero" === "1 - Hombre" && $"condicion_actividad" === "1 - Empleo Adecuado/Pleno")
+println("Hombres: " + hombresEmpleoAdecuado.count)
+
+
+
+11) Salario minimo y maximo de hombres y mujeres que tienen un empleo adecuado
+println(mujeresEmpleoAdecuado.select(min("ingreso_laboral").as("minimo"), max("ingreso_laboral").as("maximo")).show)
+
+
+println(hombresEmpleoAdecuado.select(min("ingreso_laboral").as("minimo"), max("ingreso_laboral").as("maximo")).show)
+
+
+
+// 12) Cuantas personas entre los rangos de edad de 55 y 60 años tienen un empleo no clasificado
+val rangoMayor = (mayorEdad.where($"edad" >= 55 && $"edad" <= 60))
+
+
+rangoMayor.where($"condicion_actividad" === "6 - Empleo no clasificado").count
+
+
+
+// 13) Cual es el porcentaje de personas entre los rangos de edad entre los 20 y 30 años tienen un empleo adecuado
+val rangoJoven = (mayorEdad.where($"edad" >= 20 && $"edad" <= 30))
+
+
+val rangoJoven_EmpAdec = (rangoJoven.where($"condicion_actividad" === "1 - Empleo Adecuado/Pleno").count / rangoJoven.count.toDouble) * 100
+println("Porcentaje de mujeres que tienen un empleo adecuado: " + rangoJoven_EmpAdec + " en un rango de 20 a 30 años")
+
+
